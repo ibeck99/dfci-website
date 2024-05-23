@@ -99,9 +99,25 @@
             outline: 1px solid #005290;
         }
     </style>
+
+	<head>
+    <title>Salesforce Chat - Bot Demo POC</title>
+  </head>
+  <script type="text/javascript" src="path/to/prototype.js"></script>
+  <script type="application/javascript">
+    window.onmessage = function(e) {
+      console.log(e.data.hasOwnProperty("frameHeight"));
+      if (e.data.hasOwnProperty("frameHeight")) {
+        var chatFrame = document.getElementById("chatFrame");
+        chatFrame.style.height = e.data.frameHeight + 20 + "px";
+        chatFrame.style.width = e.data.frameWidth + 20 + "px";
+      }
+    };
+  </script>
 </head>
 <body>
     <header>
+	    
         <div class="container">
             <h1>DFCI - Dana-Farber Cancer Institute</h1>
             <nav>
@@ -117,6 +133,10 @@
         </header>
     
         <main>
+
+    <div style ="bottom: 0px; right: 0px; position: absolute;" >
+      <iframe id="chatFrame" src= "<yourcoreurl>/to/ChatEmbedded.html"></iframe>
+    </div>
             <section id="about" class="container">
                 <h2>About Us</h2>
                 <p>The Dana-Farber Cancer Institute is a world leader in adult and pediatric cancer treatment and research. Our mission is to provide expert, compassionate care to children and adults and to advance the understanding, diagnosis, treatment, cure, and prevention of cancer and related diseases.</p>
@@ -210,79 +230,101 @@
     
         <!-- Chatbot Script -->
         <style type='text/css'>
-	.embeddedServiceHelpButton .helpButton .uiButton {
-		background-color: #005290;
-		font-family: "Arial", sans-serif;
-	}
-	.embeddedServiceHelpButton .helpButton .uiButton:focus {
-		outline: 1px solid #005290;
-	}
-</style>
+      .embeddedServiceHelpButton .helpButton .uiButton {
+        background-color: #005290;
+        font-family: "Arial", sans-serif;
+      }
 
-<script type='text/javascript' src='https://service.force.com/embeddedservice/5.0/esw.min.js'></script>
-<script type='text/javascript'>
-	var initESW = function(gslbBaseURL) {
-		embedded_svc.settings.displayHelpButton = true; //Or false
-		embedded_svc.settings.language = ''; //For example, enter 'en' or 'en-US'
+    .embeddedServiceHelpButton .helpButton .uiButton:focus {
+      outline: 1px solid #005290;
+    }
+    </style>
 
-		//embedded_svc.settings.defaultMinimizedText = '...'; //(Defaults to Chat with an Expert)
-		//embedded_svc.settings.disabledMinimizedText = '...'; //(Defaults to Agent Offline)
+    <script type='text/javascript' src='https://service.force.com/embeddedservice/5.0/esw.js'></script>
+    <script type='text/javascript'>
+      // On page load set the correct size of the iframe to account for either CWAE/Contact Us or Session Continuity.
+      function helpButtonLoaded() {
+        var helpButton = document.querySelector('.helpButton');
+        if (!helpButton) {
+          window.setTimeout(helpButtonLoaded, 500);
+          return;
+        }
+        var height = helpButton.clientHeight;
+        var width = helpButton.clientWidth;
+        window.parent.postMessage({
+                                  frameHeight: height,
+                                  frameWidth: width
+                                  }, '*'); // Used a * but for security reasons you can plug in the domain name.
+      }
+      window.onload = helpButtonLoaded();
 
-		//embedded_svc.settings.loadingText = ''; //(Defaults to Loading)
-		//embedded_svc.settings.storageDomain = 'yourdomain.com'; //(Sets the domain for your deployment so that visitors can navigate subdomains during a chat session)
+      var initESW = function(gslbBaseURL) {
+        embedded_svc.settings.displayHelpButton = true; // Or false
+        embedded_svc.settings.language = 'en-US'; // For example, enter 'en' or 'en-US'
+        embedded_svc.settings.devMode = true;
+        // Have set the widget height and width as a property on the object
+        embedded_svc.settings.widgetWidth = 320;
+        embedded_svc.settings.widgetHeight = 498;
+        embedded_svc.settings.enabledFeatures = ['LiveAgent'];
+        embedded_svc.settings.entryFeature = 'LiveAgent';
+        embedded_svc.init(
+          'http://localhost.internal.salesforce.com:6109',
+          'http://localhost.force.com:6109/test1',
+          gslbBaseURL,
+          '00Dxx0000001gEW',
+          'omni_1', {
+	baseLiveAgentContentURL: 'https://c.la4-c1cs-ia4.salesforceliveagent.com/content',
+	deploymentId: '5728I000000L9Qp',
+	buttonId: '5738I000000L9YS',
+	baseLiveAgentURL: 'https://d.la4-c1cs-ia4.salesforceliveagent.com/chat',
+	eswLiveAgentDevName: 'ChatBotusers',
+	isOfflineSupportEnabled: false
 
-		// Settings for Chat
-		//embedded_svc.settings.directToButtonRouting = function(prechatFormData) {
-			// Dynamically changes the button ID based on what the visitor enters in the pre-chat form.
-			// Returns a valid button ID.
-		//};
-		embedded_svc.settings.extraPrechatFormDetails = [{
-  "label": "ChatEndUserId__c",
-  "value": {! '"' & $User.id & '"'},
-  "displayToAgent": true,
-  "transcriptFields": ["ChatEndUserId__c"]
-},
-{
-  "label": "currentRecord",
-  "value": {! '"' & $CurrentPage.parameters.recordId & '"'},
-  "displayToAgent": true,
-  "transcriptFields": ["internalRecordId__c"]
-}];
-		//embedded_svc.settings.prepopulatedPrechatFields = {}; //Sets the auto-population of pre-chat form fields
-		//embedded_svc.settings.fallbackRouting = []; //An array of button IDs, user IDs, or userId_buttonId
-		//embedded_svc.settings.offlineSupportMinimizedText = '...'; //(Defaults to Contact Us)
+          }
+        );
 
-		embedded_svc.settings.enabledFeatures = ['LiveAgent'];
-		embedded_svc.settings.entryFeature = 'LiveAgent';
+        embedded_svc.addEventHandler("afterMinimize", function() {
+          var sidebar = document.querySelector('.embeddedServiceSidebarMinimizedDefaultUI');
+          var height = sidebar.clientHeight;
+          var width = sidebar.clientWidth;
+          window.parent.postMessage({
+            frameHeight: height,
+            frameWidth: width
+           }, '*');
+        });
 
-		embedded_svc.init(
-			'https://dfcipatientaccesscenter--qa.sandbox.my.salesforce.com',
-			'https://ibeck99.github.io/dfci-website/',
-			gslbBaseURL,
-			'00D8I0000008h5Z',
-			'ChatBotusers',
-			{
-				baseLiveAgentContentURL: 'https://c.la4-c1cs-ia4.salesforceliveagent.com/content',
-				deploymentId: '5728I000000L9Qp',
-				buttonId: '5738I000000L9YS',
-				baseLiveAgentURL: 'https://d.la4-c1cs-ia4.salesforceliveagent.com/chat',
-				eswLiveAgentDevName: 'ChatBotusers',
-				isOfflineSupportEnabled: false
-			}
-		);
-	};
+        embedded_svc.addEventHandler("afterMaximize", function() {
+          var container = document.querySelector('.dockableContainer');
+          var height = container.clientHeight;
+          var width = container.clientWidth;
+          window.parent.postMessage({
+            frameHeight: embedded_svc.settings.widgetHeight,
+            frameWidth: embedded_svc.settings.widgetWidth
+          }, '*');
+        });
 
-	if (!window.embedded_svc) {
-		var s = document.createElement('script');
-		s.setAttribute('src', 'https://dfcipatientaccesscenter--qa.sandbox.my.salesforce.com/embeddedservice/5.0/esw.min.js');
-		s.onload = function() {
-			initESW(null);
-		};
-		document.body.appendChild(s);
-	} else {
-		initESW('https://service.force.com');
-	}
-</script>
+        embedded_svc.addEventHandler("afterDestroy", function() {
+          var height = document.querySelector('.helpButton').clientHeight;
+          var width = document.querySelector('.helpButton').clientWidth;
+          window.parent.postMessage({
+            frameHeight: height,
+            frameWidth: width
+          }, '*');
+        });
+      };
+
+      if (!window.embedded_svc) {
+        var s = document.createElement('script');
+        s.setAttribute('src', 'https://dfcipatientaccesscenter--qa.sandbox.my.site.com/chat/embeddedservice/5.0/esw.js');
+        s.onload = function() {
+          initESW(null);
+        };
+        document.body.appendChild(s);
+      } else {
+        initESW('https://dfcipatientaccesscenter--qa.sandbox.my.site.com/chat/to/esw.js');
+      }
+
+    </script>
     
     </body>
     </html>
